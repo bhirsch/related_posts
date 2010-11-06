@@ -1,0 +1,6 @@
+; $Id $
+name = Related Posts 
+description = Use node reference CCK fields to determine 'related posts' that appear alongside that node in a 'Related Posts' block on page view (/node/nid). 
+core = 6.x
+version = "6.x-0.0"
+project = "Stars with Stripes"

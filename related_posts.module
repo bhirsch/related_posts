@@ -1,0 +1,95 @@
+<?php
+/**
+ * @file
+ *   Generate Related Posts block.`
+ */
+ 
+/**
+ * Implementation of hook_help()
+ */
+function related_posts_help($path, $arg) {
+  if ($path == 'admin/help#related_posts') {
+    $txt = 'Generate Related Posts block based on related nodes referenced by CCK nodereference field.';
+    $output = t($txt);
+    return $output;
+  }
+}
+
+/**
+ * Implementation of hook_block().
+ */
+function related_posts_block($op = 'list', $delta = 0, $edit = array()) {
+  if ($op == 'list') {
+    $blocks[0]['info'] = t('Related Posts');
+    return $blocks;
+  } else if ($op == 'view') {
+    $nid = arg(1);
+    $node = node_load($nid);
+    // check for any related posts
+    if ($node->field_related_posts[0]['nid']) { 
+      switch($delta) {
+        case 0:
+          $content = theme('related_posts_block', $node);
+          $block['subject'] = t('Related Posts');
+          $block['content'] = $content;
+        break;
+      }
+    }
+  return $block;
+  }
+}
+ 
+/**
+ * Implementation of hook_theme().
+ */
+function related_posts_theme() {
+  return array(
+    'related_posts_block' => array(
+      'arguments' => array('node' => NULL),
+    )
+  );
+}
+ 
+/**
+ * Implementation of theme function.
+ */
+function theme_related_posts_block($node) {
+  $output = '';
+  // add stylesheet
+  $path = drupal_get_path('module', 'related_posts');
+  drupal_add_css("$path/related_posts.css");
+  // Loop through related posts and prepare content
+  foreach ($node->field_related_posts as $rp) {
+    $rp_node = node_load($rp['nid']);
+    $path = $rp_node->path;
+    $title = filter_xss($rp_node->title);
+    // @TODO Add /settings page with checkbox for display teaser (or not)
+    $teaser = filter_xss($rp_node->field_teaser[0]['value']);
+    $type = node_get_types('name', $rp_node);
+    $video_url = $rp_node->field_video_url[0]['value']; 
+    // Check for video node type or video_url field
+    if ($video_url) {
+      // Theme video URL 
+      $url = check_url($video_url);
+      $size = "width:205 height:160"; // right side-bar sized
+      $autoplay = 0;
+      $text = "[video: $url $size autoplay:$autoplay]";
+      // call theme function provided by video_filter module 
+      $video = video_filter_filter('process', 0, -1, $text);
+    } 
+    // @TODO If $type==news_clip add name of news_org.
+    // Now prepare output.
+    $output .= '<div class="related-post related-'. $type .'">';
+    $output .= "<div class='related-post-type'>$type</div>";
+    $output .= '<div class="related-post-title">'. l($title, $path) .'</div>';
+    if ($video) { // display video in sidebar
+      $output .= '<div class="related-post-video">'. $video .'</div>';
+      $video = ''; // empty for next loop
+    } else { // display teaser
+      $output .= '<div class="teaser related-post-teaser">'. $teaser .'</div>';
+    }
+    $output .= '</div>';
+  }  
+
+  return $output;
+}
